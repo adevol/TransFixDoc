@@ -53,12 +53,11 @@ class DoclingOcrBackend:
         converter = DocumentConverter(
             format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=options)}
         )
+        doc = converter.convert(pdf_path).document
         pages = []
 
-        for page_no in range(1, _page_count(pdf_path) + 1):
+        for page_no in sorted(doc.pages):
             try:
-                result = converter.convert(pdf_path, page_range=(page_no, page_no))
-                doc = result.document
                 page = doc.pages[page_no]
                 image_path = _save_page_image(page, output_dir, page_no)
                 text = doc.export_to_markdown(page_no=page_no).strip()
@@ -131,12 +130,6 @@ def _save_page_image(page: object, output_dir: Path, page_no: int) -> Path | Non
     path = output_dir / f"page-{page_no:03}.png"
     image.save(path, format="PNG")
     return path
-
-
-def _page_count(pdf_path: Path) -> int:
-    import pypdfium2 as pdfium
-
-    return len(pdfium.PdfDocument(pdf_path))
 
 
 def _mistral_client() -> object:
