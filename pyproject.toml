@@ -1,7 +1,21 @@
 [project]
 name = "transfixdoc"
 version = "0.1.0"
-description = "Add your description here"
+description = "Analyze scanned PDFs with OCR and LLM-assisted translation or correction."
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "docling>=2.52.0",
+    "openai>=1.100.0",
+    "pydantic>=2.11.0",
+    "python-dotenv>=1.2.0",
+    "reportlab>=4.4.0",
+    "typer>=0.16.0",
+]
+
+[project.scripts]
+transfixdoc = "transfixdoc.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
