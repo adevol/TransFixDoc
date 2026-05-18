@@ -1,5 +1,7 @@
 """OCR backends."""
 
+import base64
+import os
 from pathlib import Path
 from typing import Protocol
 
@@ -70,6 +72,42 @@ class DoclingOcrBackend:
         return Document(source_path=pdf_path, pages=pages)
 
 
+class MistralOcrBackend:
+    """Mistral-backed OCR implementation."""
+
+    def __init__(self, image_scale: float = 2.0) -> None:
+        self.image_scale = image_scale
+
+    def extract_text(self, pdf_path: Path, output_dir: Path) -> Document:
+        """Extract text with Mistral OCR and render page images locally.
+
+        Args:
+            pdf_path: PDF to process.
+            output_dir: Directory for generated page images.
+
+        Returns:
+            Extracted document.
+        """
+        output_dir.mkdir(parents=True, exist_ok=True)
+        response = _mistral_client().ocr.process(
+            model="mistral-ocr-latest",
+            document={
+                "type": "document_url",
+                "document_url": _pdf_data_url(pdf_path),
+            },
+        )
+        images = _render_page_images(pdf_path, output_dir, self.image_scale)
+        pages = [
+            Page(
+                page_number=_page_index(page) + 1,
+                text=_page_markdown(page).strip(),
+                image_path=images.get(_page_index(page) + 1),
+            )
+            for page in response.pages
+        ]
+        return Document(source_path=pdf_path, pages=pages)
+
+
 def get_ocr_backend(name: str, image_scale: float = 2.0) -> OcrBackend:
     """Create an OCR backend by name.
 
@@ -81,6 +119,8 @@ def get_ocr_backend(name: str, image_scale: float = 2.0) -> OcrBackend:
     """
     if name == "docling":
         return DoclingOcrBackend(image_scale=image_scale)
+    if name == "mistral":
+        return MistralOcrBackend(image_scale=image_scale)
     raise ValueError(f"Unsupported OCR backend: {name}")
 
 
@@ -97,3 +137,41 @@ def _page_count(pdf_path: Path) -> int:
     import pypdfium2 as pdfium
 
     return len(pdfium.PdfDocument(pdf_path))
+
+
+def _mistral_client() -> object:
+    try:
+        from mistralai import Mistral
+    except ImportError:
+        from mistralai.client import Mistral
+
+    return Mistral(api_key=os.environ["MISTRAL_API_KEY"])
+
+
+def _pdf_data_url(pdf_path: Path) -> str:
+    encoded = base64.b64encode(pdf_path.read_bytes()).decode("ascii")
+    return f"data:application/pdf;base64,{encoded}"
+
+
+def _render_page_images(pdf_path: Path, output_dir: Path, image_scale: float) -> dict[int, Path]:
+    import pypdfium2 as pdfium
+
+    pdf = pdfium.PdfDocument(pdf_path)
+    paths = {}
+    for index, page in enumerate(pdf, start=1):
+        path = output_dir / f"page-{index:03}.png"
+        page.render(scale=image_scale).to_pil().save(path)
+        paths[index] = path
+    return paths
+
+
+def _page_index(page: object) -> int:
+    if isinstance(page, dict):
+        return int(page.get("index", 0))
+    return int(getattr(page, "index", 0))
+
+
+def _page_markdown(page: object) -> str:
+    if isinstance(page, dict):
+        return str(page.get("markdown", ""))
+    return str(getattr(page, "markdown", ""))
