@@ -70,15 +70,15 @@ classDiagram
         +extract_text(pdf_path, output_dir) Document
     }
 
-    class ReportWriter {
-        +write(document, output_path) Path
+    class ReportModule {
+        +write_report(document, output_path) Path
     }
 
     OcrBackend <|.. DoclingOcrBackend
     OcrBackend <|.. MistralOcrBackend
     OcrBackend --> Document
     Document --> Page
-    ReportWriter --> Document
+    ReportModule --> Document
 ```
 
 ## OCR Backends
