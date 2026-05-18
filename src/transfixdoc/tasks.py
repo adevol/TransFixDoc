@@ -69,7 +69,7 @@ def _process_pages(
                 model=config.task_model,
                 input=[
                     {"role": "system", "content": system},
-                    {"role": "user", "content": _page_content(page)},
+                    {"role": "user", "content": _page_input(page)},
                 ],
             )
             text = transform(page.text, response.output_text)
@@ -86,15 +86,11 @@ def _process_pages(
     return Document(source_path=document.source_path, pages=pages)
 
 
-def _page_content(page: Page) -> str | list[dict[str, str]]:
+def _page_input(page: Page) -> str | list[dict[str, str]]:
     text = "" if page.text.strip() == "<!-- image -->" else page.text.strip()
     if page.image_path and page.image_path.exists():
         image = base64.b64encode(page.image_path.read_bytes()).decode("ascii")
-        prompt = (
-            "Correct and verify the English spelling visible on this scanned page. "
-            "Use the OCR text as a hint when it is useful.\n\n"
-            f"OCR text:\n{text or '[No useful OCR text]'}"
-        )
+        prompt = f"OCR text, if available:\n{text or '[No useful OCR text]'}"
         return [
             {"type": "input_text", "text": prompt},
             {"type": "input_image", "image_url": f"data:image/png;base64,{image}"},
