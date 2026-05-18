@@ -27,8 +27,7 @@ uv run transfixdoc "data\血压仪德文说明书 英文部分-260509.pdf" `
   --ocr-backend mistral `
   --report output2\blood-pressure-correction-report.pdf `
   --workdir output2\work `
-  --image-scale 2.0 `
-  --skip-language-check
+  --image-scale 2.0
 ```
 
 Output:
@@ -40,7 +39,7 @@ output2/blood-pressure-correction-report.pdf
 ## Docling Fallback
 
 ```powershell
-uv run transfixdoc "data\血压仪德文说明书 英文部分-260509.pdf" --task correct --source-language en --ocr-backend docling --report output\blood-pressure-correction-report.pdf --workdir output\work --image-scale 2.0 --skip-language-check
+uv run transfixdoc "data\血压仪德文说明书 英文部分-260509.pdf" --task correct --source-language en --ocr-backend docling --report output\blood-pressure-correction-report.pdf --workdir output\work --image-scale 2.0
 ```
 
 ## Translate
@@ -56,4 +55,4 @@ uv run transfixdoc input.pdf --task translate --source-language de --target-lang
 - `--task correct`: correct spelling/OCR/grammar.
 - `--task translate`: translate each page.
 - `--image-scale 2.0`: sharper report images.
-- `--skip-language-check`: use when you already know the source language.
+- `--check-language`: verify `--source-language` with an LLM detection pass before processing. Off by default.

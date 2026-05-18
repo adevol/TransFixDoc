@@ -28,7 +28,10 @@ def run(
     ] = 2.0,
     detection_model: Annotated[str, typer.Option()] = "gpt-4.1-mini",
     task_model: Annotated[str, typer.Option()] = "gpt-4.1-mini",
-    skip_language_check: Annotated[bool, typer.Option()] = False,
+    check_language: Annotated[
+        bool,
+        typer.Option(help="Verify --source-language against an LLM detection pass."),
+    ] = False,
     workdir: Annotated[Path | None, typer.Option()] = None,
 ) -> None:
     """Analyze a PDF and write a translation or correction report."""
@@ -47,12 +50,17 @@ def run(
     document = get_ocr_backend(config.ocr_backend, config.image_scale).extract_text(
         input_pdf, config.workdir
     )
-    detected = config.source_language if skip_language_check else detect_language(document, config.detection_model)
 
-    if detected != config.source_language:
-        raise typer.BadParameter(
-            f"source language mismatch: expected {config.source_language}, detected {detected}"
-        )
+    if check_language:
+        detected = detect_language(document, config.detection_model)
+        if detected != config.source_language:
+            typer.echo(
+                f"Source language mismatch: expected {config.source_language}, detected {detected}. "
+                f"OCR output is in {config.workdir}. Re-run with --source-language {detected} "
+                f"or drop --check-language.",
+                err=True,
+            )
+            raise typer.Exit(2)
 
     result = (
         translate_pages(document, config)
