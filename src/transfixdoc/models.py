@@ -37,3 +37,4 @@ class PipelineConfig(BaseModel):
     detection_model: str = "gpt-4.1-mini"
     task_model: str = "gpt-4.1-mini"
     workdir: Path | None = None
+    max_workers: int = Field(default=8, ge=1)

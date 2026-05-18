@@ -1,6 +1,7 @@
 """Translation and correction tasks."""
 
 import base64
+from concurrent.futures import ThreadPoolExecutor
 from difflib import SequenceMatcher
 from typing import Callable
 
@@ -62,8 +63,8 @@ def _process_pages(
     from openai import OpenAI
 
     client = OpenAI()
-    pages = []
-    for page in document.pages:
+
+    def process(page: Page) -> Page:
         try:
             response = client.responses.create(
                 model=config.task_model,
@@ -73,16 +74,17 @@ def _process_pages(
                 ],
             )
             text = transform(page.text, response.output_text)
-            pages.append(page.model_copy(update={"text": text, "error": None}))
+            return page.model_copy(update={"text": text, "error": None})
         except Exception as exc:
-            pages.append(
-                Page(
-                    page_number=page.page_number,
-                    text="",
-                    image_path=page.image_path,
-                    error=str(exc),
-                )
+            return Page(
+                page_number=page.page_number,
+                text="",
+                image_path=page.image_path,
+                error=str(exc),
             )
+
+    with ThreadPoolExecutor(max_workers=config.max_workers) as pool:
+        pages = list(pool.map(process, document.pages))
     return Document(source_path=document.source_path, pages=pages)
 
 

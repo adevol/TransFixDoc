@@ -33,6 +33,10 @@ def run(
         typer.Option(help="Verify --source-language against an LLM detection pass."),
     ] = False,
     workdir: Annotated[Path | None, typer.Option()] = None,
+    max_workers: Annotated[
+        int,
+        typer.Option(help="Parallel per-page LLM calls.", min=1),
+    ] = 8,
 ) -> None:
     """Analyze a PDF and write a translation or correction report."""
     load_dotenv()
@@ -46,6 +50,7 @@ def run(
         detection_model=detection_model,
         task_model=task_model,
         workdir=workdir or report.parent / "work",
+        max_workers=max_workers,
     )
     document = get_ocr_backend(config.ocr_backend, config.image_scale).extract_text(
         input_pdf, config.workdir

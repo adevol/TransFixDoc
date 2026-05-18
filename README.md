@@ -56,3 +56,4 @@ uv run transfixdoc input.pdf --task translate --source-language de --target-lang
 - `--task translate`: translate each page.
 - `--image-scale 2.0`: sharper report images.
 - `--check-language`: verify `--source-language` with an LLM detection pass before processing. Off by default.
+- `--max-workers 8`: number of parallel per-page LLM calls. Lower if you hit rate limits.
