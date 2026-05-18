@@ -1,6 +1,5 @@
-def main():
-    print("Hello from transfixdoc!")
+from transfixdoc.cli import app
 
 
 if __name__ == "__main__":
-    main()
+    app()
