@@ -24,9 +24,10 @@ def translate_pages(document: Document, config: PipelineConfig) -> Document:
     return _process_pages(
         document,
         config,
-        system=(
+        system=_with_context(
+            config,
             "Translate the user's page text completely and faithfully from "
-            f"{config.source_language} to {target}. Return only the translation."
+            f"{config.source_language} to {target}. Return only the translation.",
         ),
         transform=lambda original, generated: generated.strip(),
     )
@@ -45,12 +46,37 @@ def correct_pages(document: Document, config: PipelineConfig) -> Document:
     return _process_pages(
         document,
         config,
-        system=(
-            "Correct OCR, spelling, grammar, and terminology issues in the page "
-            "text. Return only the full corrected text."
+        system=_with_context(
+            config,
+            "Correct OCR errors, spelling, grammar, terminology, and sentences "
+            "that are grammatically valid but logically incoherent, missing "
+            "words, or read as literal translations from another language. If a "
+            "sentence is already natural and accurate, leave it unchanged "
+            "word-for-word — do not rephrase for style.\n"
+            "\n"
+            "Examples:\n"
+            "Input: 'Wait until the green light.'\n"
+            "Output: 'Wait until the green light appears.'\n"
+            "\n"
+            "Input: 'Please do not disassemble it privately.'\n"
+            "Output: 'Please do not disassemble it yourself.'\n"
+            "\n"
+            "Input: 'Lift the case by sliding it through the handle.'\n"
+            "Output: 'Lift the case by gripping the handle.'\n"
+            "\n"
+            "Input: 'Press the START button to begin.'\n"
+            "Output: 'Press the START button to begin.'\n"
+            "\n"
+            "Return only the full corrected text.",
         ),
         transform=_highlight_corrections,
     )
+
+
+def _with_context(config: PipelineConfig, instruction: str) -> str:
+    if config.context:
+        return f"Document context: {config.context}\n\n{instruction}"
+    return instruction
 
 
 def _process_pages(
