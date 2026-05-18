@@ -1,6 +1,5 @@
 """OCR backends."""
 
-import base64
 import os
 from pathlib import Path
 from typing import Protocol
@@ -88,13 +87,19 @@ class MistralOcrBackend:
             Extracted document.
         """
         output_dir.mkdir(parents=True, exist_ok=True)
-        response = _mistral_client().ocr.process(
-            model="mistral-ocr-latest",
-            document={
-                "type": "document_url",
-                "document_url": _pdf_data_url(pdf_path),
-            },
+        client = _mistral_client()
+        uploaded = client.files.upload(
+            file={"file_name": pdf_path.name, "content": pdf_path.read_bytes()},
+            purpose="ocr",
         )
+        try:
+            signed = client.files.get_signed_url(file_id=uploaded.id)
+            response = client.ocr.process(
+                model="mistral-ocr-latest",
+                document={"type": "document_url", "document_url": signed.url},
+            )
+        finally:
+            client.files.delete(file_id=uploaded.id)
         images = _render_page_images(pdf_path, output_dir, self.image_scale)
         pages = [
             Page(
@@ -141,20 +146,22 @@ def _mistral_client() -> object:
     return Mistral(api_key=os.environ["MISTRAL_API_KEY"])
 
 
-def _pdf_data_url(pdf_path: Path) -> str:
-    encoded = base64.b64encode(pdf_path.read_bytes()).decode("ascii")
-    return f"data:application/pdf;base64,{encoded}"
-
-
 def _render_page_images(pdf_path: Path, output_dir: Path, image_scale: float) -> dict[int, Path]:
     import pypdfium2 as pdfium
 
     pdf = pdfium.PdfDocument(pdf_path)
-    paths = {}
-    for index, page in enumerate(pdf, start=1):
-        path = output_dir / f"page-{index:03}.png"
-        page.render(scale=image_scale).to_pil().save(path)
-        paths[index] = path
+    paths: dict[int, Path] = {}
+    try:
+        for index in range(len(pdf)):
+            page = pdf[index]
+            try:
+                path = output_dir / f"page-{index + 1:03}.png"
+                page.render(scale=image_scale).to_pil().save(path)
+                paths[index + 1] = path
+            finally:
+                page.close()
+    finally:
+        pdf.close()
     return paths
 
 

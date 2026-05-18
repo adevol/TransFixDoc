@@ -34,7 +34,8 @@ class PipelineConfig(BaseModel):
     report_path: Path
     ocr_backend: str = "docling"
     image_scale: float = Field(default=2.0, gt=0)
-    detection_model: str = "gpt-4.1-mini"
-    task_model: str = "gpt-4.1-mini"
+    detection_model: str = "gpt-5-mini"
+    task_model: str = "gpt-5-mini"
     workdir: Path | None = None
     max_workers: int = Field(default=8, ge=1)
+    context: str | None = None

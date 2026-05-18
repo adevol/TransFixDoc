@@ -6,7 +6,7 @@ from typing import Annotated
 import typer
 from dotenv import load_dotenv
 
-from transfixdoc.language import detect_language
+from transfixdoc.language import analyze_document
 from transfixdoc.models import PipelineConfig, Task
 from transfixdoc.ocr import get_ocr_backend
 from transfixdoc.report import write_report
@@ -26,8 +26,8 @@ def run(
     image_scale: Annotated[
         float, typer.Option(help="Scale factor for saved page images.")
     ] = 2.0,
-    detection_model: Annotated[str, typer.Option()] = "gpt-4.1-mini",
-    task_model: Annotated[str, typer.Option()] = "gpt-4.1-mini",
+    detection_model: Annotated[str, typer.Option()] = "gpt-5-mini",
+    task_model: Annotated[str, typer.Option()] = "gpt-5-mini",
     check_language: Annotated[
         bool,
         typer.Option(help="Verify --source-language against an LLM detection pass."),
@@ -56,16 +56,17 @@ def run(
         input_pdf, config.workdir
     )
 
-    if check_language:
-        detected = detect_language(document, config.detection_model)
-        if detected != config.source_language:
-            typer.echo(
-                f"Source language mismatch: expected {config.source_language}, detected {detected}. "
-                f"OCR output is in {config.workdir}. Re-run with --source-language {detected} "
-                f"or drop --check-language.",
-                err=True,
-            )
-            raise typer.Exit(2)
+    analysis = analyze_document(document, config.detection_model)
+    config.context = analysis.context
+
+    if check_language and analysis.language != config.source_language:
+        typer.echo(
+            f"Source language mismatch: expected {config.source_language}, detected {analysis.language}. "
+            f"OCR output is in {config.workdir}. Re-run with --source-language {analysis.language} "
+            f"or drop --check-language.",
+            err=True,
+        )
+        raise typer.Exit(2)
 
     result = (
         translate_pages(document, config)
