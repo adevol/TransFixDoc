@@ -27,7 +27,12 @@ def translate_pages(document: Document, config: PipelineConfig) -> Document:
         system=_with_context(
             config,
             "Translate the user's page text completely and faithfully from "
-            f"{config.source_language} to {target}. Return only the translation.",
+            f"{config.source_language} to {target}. Use natural, idiomatic "
+            f"{target} suitable for a product manual. You may restructure "
+            "sentences, split or combine clauses, and choose clearer wording "
+            "when that improves readability, but preserve the meaning, "
+            "warnings, numbers, units, product terms, button names, and "
+            "technical details. Return only the translation.",
         ),
         transform=lambda original, generated: generated.strip(),
     )
